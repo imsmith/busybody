@@ -19,7 +19,7 @@ defmodule BusybodyWeb.Router do
   scope "/", BusybodyWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", DirectoryLive
   end
 
   scope "/api", BusybodyWeb do
