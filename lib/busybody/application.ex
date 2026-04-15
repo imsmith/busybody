@@ -11,9 +11,8 @@ defmodule Busybody.Application do
       BusybodyWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:busybody, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Busybody.PubSub},
-      # Start a worker by calling: Busybody.Worker.start_link(arg)
-      # {Busybody.Worker, arg},
-      # Start to serve requests, typically the last entry
+      Busybody.Registry,
+      Busybody.HealthChecker,
       BusybodyWeb.Endpoint
     ]
 

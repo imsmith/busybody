@@ -4,7 +4,6 @@ defmodule BusybodyWeb.ApiControllerTest do
   use BusybodyWeb.ConnCase
 
   setup do
-    start_supervised!(Busybody.Registry)
     apps = Busybody.Registry.list()
     Enum.each(apps, fn app -> Busybody.Registry.deregister(app.name) end)
     :ok
