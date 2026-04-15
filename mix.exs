@@ -1,4 +1,5 @@
 defmodule Busybody.MixProject do
+  @moduledoc false
   use Mix.Project
 
   def project do
@@ -21,7 +22,7 @@ defmodule Busybody.MixProject do
   def application do
     [
       mod: {Busybody.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :inets]
     ]
   end
 
