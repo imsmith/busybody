@@ -1,4 +1,6 @@
 defmodule BusybodyWeb.Router do
+  @moduledoc false
+
   use BusybodyWeb, :router
 
   pipeline :browser do
@@ -20,8 +22,10 @@ defmodule BusybodyWeb.Router do
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", BusybodyWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", BusybodyWeb do
+    pipe_through :api
+
+    post "/register", ApiController, :register
+    get "/apps", ApiController, :index
+  end
 end
