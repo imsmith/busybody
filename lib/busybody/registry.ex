@@ -14,23 +14,64 @@ defmodule Busybody.Registry do
 
   # Client API
 
+  @doc "Start the registry, optionally with a custom `:name`."
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, %{}, name: name)
   end
 
+  @doc """
+  Register or update an app entry.
+
+  Upserts by name — a re-registration updates port/pid/host and refreshes
+  `last_seen` while preserving the original `registered_at`.
+
+  ## Examples
+
+      iex> {:ok, registry} = Busybody.Registry.start_link(name: :doctest_reg)
+      iex> Busybody.Registry.register(registry, %{name: "myapp", port: 4000, pid: "1", host: "localhost"})
+      :ok
+      iex> [app] = Busybody.Registry.list(registry)
+      iex> app.name
+      "myapp"
+
+  """
   def register(server \\ __MODULE__, attrs) do
     GenServer.call(server, {:register, attrs})
   end
 
+  @doc """
+  Remove an app by name. No-op if the name isn't registered.
+
+  ## Examples
+
+      iex> {:ok, registry} = Busybody.Registry.start_link(name: :doctest_dereg)
+      iex> Busybody.Registry.register(registry, %{name: "gone", port: 4000, pid: "1", host: "localhost"})
+      iex> Busybody.Registry.deregister(registry, "gone")
+      :ok
+      iex> Busybody.Registry.list(registry)
+      []
+
+  """
   def deregister(server \\ __MODULE__, name) do
     GenServer.call(server, {:deregister, name})
   end
 
+  @doc """
+  List all registered apps.
+
+  ## Examples
+
+      iex> {:ok, registry} = Busybody.Registry.start_link(name: :doctest_list)
+      iex> Busybody.Registry.list(registry)
+      []
+
+  """
   def list(server \\ __MODULE__) do
     GenServer.call(server, :list)
   end
 
+  @doc "Subscribe to registry change notifications via PubSub."
   def subscribe do
     Phoenix.PubSub.subscribe(@pubsub, @topic)
   end

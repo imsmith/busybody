@@ -24,10 +24,27 @@ defmodule Busybody.Client do
   @heartbeat_interval :timer.seconds(60)
   @startup_delay :timer.seconds(2)
 
+  @doc "Start the client GenServer. See module docs for available options."
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :process_name, __MODULE__))
   end
 
+  @doc """
+  Build the JSON registration payload from the given opts.
+
+  ## Examples
+
+      iex> payload = Busybody.Client.build_payload(name: "demo", port: 4000, host: "devbox")
+      iex> payload.name
+      "demo"
+      iex> payload.port
+      4000
+      iex> payload.host
+      "devbox"
+      iex> is_binary(payload.pid)
+      true
+
+  """
   def build_payload(opts) do
     {:ok, hostname} = :inet.gethostname()
 
@@ -39,6 +56,19 @@ defmodule Busybody.Client do
     }
   end
 
+  @doc """
+  Resolve the port from opts — either an explicit `:port` or by
+  querying the `:endpoint` module's HTTP config.
+
+  ## Examples
+
+      iex> Busybody.Client.resolve_port(port: 4567)
+      4567
+
+      iex> Busybody.Client.resolve_port(name: "oops")
+      ** (ArgumentError) Busybody.Client requires either :port or :endpoint option
+
+  """
   def resolve_port(opts) do
     cond do
       Keyword.has_key?(opts, :port) ->

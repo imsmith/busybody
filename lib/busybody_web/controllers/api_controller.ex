@@ -1,5 +1,10 @@
 defmodule BusybodyWeb.ApiController do
-  @moduledoc false
+  @moduledoc """
+  JSON API for app registration.
+
+  * `POST /api/register` — upsert an app entry (name, port, pid, host)
+  * `GET  /api/apps`     — list all registered apps
+  """
 
   use BusybodyWeb, :controller
 

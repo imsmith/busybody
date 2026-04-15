@@ -1,5 +1,11 @@
 defmodule BusybodyWeb.DirectoryLive do
-  @moduledoc false
+  @moduledoc """
+  Live directory of all registered dev apps.
+
+  Subscribes to `Busybody.Registry` PubSub events and re-renders the
+  card grid in real-time as apps register, deregister, or get pruned
+  by the health checker. A 5-second tick keeps relative timestamps fresh.
+  """
 
   use BusybodyWeb, :live_view
 
