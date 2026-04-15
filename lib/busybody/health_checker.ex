@@ -11,6 +11,7 @@ defmodule Busybody.HealthChecker do
 
   @default_interval :timer.seconds(30)
   @tcp_timeout :timer.seconds(2)
+  @max_concurrency 10
 
   @doc "Start the health checker GenServer."
   def start_link(opts) do
@@ -22,22 +23,42 @@ defmodule Busybody.HealthChecker do
   @doc """
   Probe every app in the registry and deregister those whose port is unreachable.
 
+  Runs probes concurrently (up to #{@max_concurrency} at a time) so a few
+  slow hosts can't stall the entire check cycle.
+
   Accepts an explicit registry pid/name; defaults to `Busybody.Registry`.
   """
   def check_all(registry \\ Busybody.Registry) do
     apps = Busybody.Registry.list(registry)
 
-    Enum.each(apps, fn app ->
-      host = to_charlist(app.host)
+    apps
+    |> Task.async_stream(
+      fn app -> {app.name, probe(app.host, app.port)} end,
+      max_concurrency: @max_concurrency,
+      timeout: @tcp_timeout + :timer.seconds(1),
+      on_timeout: :kill_task
+    )
+    |> Enum.each(fn
+      {:ok, {name, :unreachable}} ->
+        Busybody.Registry.deregister(registry, name)
 
-      case :gen_tcp.connect(host, app.port, [], @tcp_timeout) do
-        {:ok, socket} ->
-          :gen_tcp.close(socket)
+      {:ok, {_name, :ok}} ->
+        :ok
 
-        {:error, _} ->
-          Busybody.Registry.deregister(registry, app.name)
-      end
+      {:exit, _reason} ->
+        :ok
     end)
+  end
+
+  defp probe(host, port) do
+    case :gen_tcp.connect(to_charlist(host), port, [], @tcp_timeout) do
+      {:ok, socket} ->
+        :gen_tcp.close(socket)
+        :ok
+
+      {:error, _} ->
+        :unreachable
+    end
   end
 
   @impl GenServer

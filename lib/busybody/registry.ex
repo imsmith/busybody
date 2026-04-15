@@ -11,6 +11,7 @@ defmodule Busybody.Registry do
 
   @pubsub Busybody.PubSub
   @topic "registry"
+  @max_entries 100
 
   # Client API
 
@@ -85,20 +86,26 @@ defmodule Busybody.Registry do
 
   @impl true
   def handle_call({:register, attrs}, _from, state) do
-    now = DateTime.utc_now()
+    is_update = Map.has_key?(state, attrs.name)
 
-    entry = %{
-      name: attrs.name,
-      port: attrs.port,
-      pid: attrs.pid,
-      host: attrs.host,
-      registered_at: get_in(state, [attrs.name, :registered_at]) || now,
-      last_seen: now
-    }
+    if not is_update and map_size(state) >= @max_entries do
+      {:reply, {:error, :registry_full}, state}
+    else
+      now = DateTime.utc_now()
 
-    new_state = Map.put(state, attrs.name, entry)
-    broadcast({:app_registered, entry})
-    {:reply, :ok, new_state}
+      entry = %{
+        name: attrs.name,
+        port: attrs.port,
+        pid: attrs.pid,
+        host: attrs.host,
+        registered_at: get_in(state, [attrs.name, :registered_at]) || now,
+        last_seen: now
+      }
+
+      new_state = Map.put(state, attrs.name, entry)
+      broadcast({:app_registered, entry})
+      {:reply, :ok, new_state}
+    end
   end
 
   @impl true

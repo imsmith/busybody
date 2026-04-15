@@ -37,6 +37,24 @@ defmodule BusybodyWeb.ApiControllerTest do
 
       assert json_response(conn, 422)
     end
+
+    test "returns 422 when port is out of range", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/register", %{"name" => "bad", "port" => 99999, "pid" => "1", "host" => "x"})
+
+      assert json_response(conn, 422)
+    end
+
+    test "returns 422 when port is a string", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/register", %{"name" => "bad", "port" => "4000", "pid" => "1", "host" => "x"})
+
+      assert json_response(conn, 422)
+    end
   end
 
   describe "GET /api/apps" do
