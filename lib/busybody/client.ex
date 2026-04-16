@@ -76,8 +76,16 @@ defmodule Busybody.Client do
 
       Keyword.has_key?(opts, :endpoint) ->
         endpoint = Keyword.get(opts, :endpoint)
-        config = endpoint.config(:http, [])
-        Keyword.get(config, :port, 4000)
+
+        case Keyword.get(endpoint.config(:url, []), :port) do
+          port when is_integer(port) and port > 0 ->
+            port
+
+          _ ->
+            # Get the actual bound port from the running server
+            {:ok, {_ip, port}} = endpoint.server_info(:http)
+            port
+        end
 
       true ->
         raise ArgumentError, "Busybody.Client requires either :port or :endpoint option"
