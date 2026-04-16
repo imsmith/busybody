@@ -1,18 +1,168 @@
 # Busybody
 
-To start your Phoenix server:
+## The Problem
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+When you're developing multiple Phoenix apps at once, you want them to
+stay out of each other's way. The easiest trick is to let each app grab
+a random port on startup — set `port: 0` in your dev config and the OS
+picks one for you. No collisions, no coordination, no remembering which
+app is on 4000 and which is on 4001.
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+But now you have a different problem: you don't know where anything is.
+Each time an app starts it gets a new port. You have to watch the
+startup log to catch it, and if you miss it — or you come back to your
+desk after lunch — you're grepping through terminal history or running
+`lsof` to find your own apps.
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+This is a solved problem in production. You run a service registry —
+Consul, etcd, a load balancer — and services announce themselves. But
+nobody sets up Consul for local dev. The overhead isn't worth it for
+something that should be trivial.
 
-## Learn more
+## The Fix
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+Busybody is a small Phoenix app that acts as a service directory for
+your local dev environment. It runs on a fixed, well-known port (5150)
+and provides two things:
+
+1. **A registration API.** Apps POST their name, port, host, and PID
+   when they start up. They re-register every 60 seconds as a
+   heartbeat.
+
+2. **A live directory page.** A LiveView at `http://localhost:5150`
+   that shows every registered app as a clickable card. Cards appear
+   and disappear in real-time as apps come and go. No polling, no
+   refreshing.
+
+When an app dies without deregistering (which is most of the time —
+Ctrl-C doesn't run shutdown hooks), a health checker runs every 30
+seconds and TCP-probes each registered app. If it can't connect, the
+entry gets pruned. Dead apps disappear from the directory within 30
+seconds.
+
+The whole thing is one Elixir app, no database, no external
+dependencies. State lives in a GenServer. When busybody restarts,
+it starts empty — and the client heartbeats refill it within 60
+seconds.
+
+## Architecture
+
+There are five moving parts:
+
+**Registry** (`Busybody.Registry`) — A GenServer holding a map of
+registered apps, keyed by name. Each entry carries the app's name,
+port, PID, host, and timestamps. Changes are broadcast via PubSub so
+the LiveView can react in real-time. Capped at 100 entries to prevent
+abuse.
+
+**Health Checker** (`Busybody.HealthChecker`) — A GenServer that fires
+every 30 seconds, grabs the app list from the Registry, and
+TCP-connects to each one. Failed connections trigger a deregister.
+Probes run concurrently (up to 10 at a time) so a few slow hosts
+can't stall the cycle.
+
+**API Controller** (`BusybodyWeb.ApiController`) — Two endpoints:
+
+    POST /api/register   {"name": "myapp", "port": 4829, "pid": "12345", "host": "devbox"}
+    GET  /api/apps        returns the full registry as JSON
+
+Input is validated at the boundary: port must be an integer 1-65535,
+name/pid/host must be non-empty strings.
+
+**LiveView** (`BusybodyWeb.DirectoryLive`) — The directory page at `/`.
+Subscribes to PubSub events from the Registry. Cards show the app
+name, host, port, PID, and a relative "last seen" timestamp. Each card
+links to the app. Status dots indicate health: green (seen in the last
+60s), amber (stale), red (about to be pruned).
+
+**Client** (`Busybody.Client`) — A GenServer that other Phoenix apps
+add to their supervision tree. On startup it resolves the app's port
+(from the endpoint config or an explicit option), registers with
+busybody, and heartbeats every 60 seconds.
+
+## Setup
+
+Start busybody:
+
+    cd busybody
+    mix setup
+    mix phx.server
+
+It binds to `0.0.0.0:5150` — reachable from other machines on the
+network, not just localhost.
+
+## Adding a Client App
+
+Add busybody as a dev-only dependency in the client app's `mix.exs`:
+
+```elixir
+defp deps do
+  [
+    # ... your other deps
+    {:busybody, path: "../busybody", only: :dev}
+  ]
+end
+```
+
+Then add the client to your supervision tree in `application.ex`:
+
+```elixir
+def start(_type, _args) do
+  children = [
+    # ... your other children
+    MyAppWeb.Endpoint,
+    {Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}
+  ]
+
+  opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+  Supervisor.start_link(children, opts)
+end
+```
+
+The client goes after the endpoint so the port is bound before
+registration happens.
+
+If you want to gate it so it only runs in dev (and doesn't break
+prod/test builds where busybody isn't available):
+
+```elixir
+children = [
+  MyAppWeb.Endpoint
+] ++ busybody_children()
+
+defp busybody_children do
+  if Code.ensure_loaded?(Busybody.Client) do
+    [{Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}]
+  else
+    []
+  end
+end
+```
+
+### Client Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `name` | *(required)* | App name shown in the directory |
+| `endpoint` | *(required unless `port` given)* | Phoenix endpoint module — used to resolve the port |
+| `port` | *(from endpoint)* | Explicit port, overrides endpoint resolution |
+| `registry_url` | `http://localhost:5150` | Where busybody is running |
+| `host` | system hostname | Host shown in the directory and used for health checks |
+
+### Without the Client Library
+
+You don't need the client library. Any HTTP client works:
+
+```bash
+curl -X POST http://localhost:5150/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"myapp","port":4000,"pid":"12345","host":"localhost"}'
+```
+
+Re-send it every 60 seconds to stay in the directory. Or don't — a
+one-shot registration works too, the entry just won't survive a
+busybody restart.
+
+## License
+
+AGPL-3.0
