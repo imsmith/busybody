@@ -93,51 +93,45 @@ network, not just localhost.
 
 ## Adding a Client App
 
-Add busybody as a dev-only dependency in the client app's `mix.exs`:
+The fastest way is the install task. From inside your Phoenix project:
 
-```elixir
-defp deps do
-  [
-    # ... your other deps
+    mix busybody.install
+
+This patches your `mix.exs` and `application.ex` in one shot. It adds
+the dep, wires the client into your supervision tree, and gates it
+behind `Code.ensure_loaded?/1` so it only runs when the dep is
+available (i.e., dev). By default it infers the app name from your
+OTP app and assumes busybody lives at `../busybody`.
+
+Options:
+
+    mix busybody.install --name my_cool_app
+    mix busybody.install --path ../../tools/busybody
+    mix busybody.install --git https://github.com/imsmith/busybody.git
+
+After running the installer, just `mix deps.get` and start your app.
+
+### What the installer does
+
+It makes two changes. In `mix.exs`, it adds the dep:
+
     {:busybody, path: "../busybody", only: :dev}
-  ]
-end
-```
 
-Then add the client to your supervision tree in `application.ex`:
+In `application.ex`, it appends `++ busybody_children()` to your
+children list and adds a helper function:
 
-```elixir
-def start(_type, _args) do
-  children = [
-    # ... your other children
-    MyAppWeb.Endpoint,
-    {Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}
-  ]
+    defp busybody_children do
+      if Code.ensure_loaded?(Busybody.Client) do
+        [{Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}]
+      else
+        []
+      end
+    end
 
-  opts = [strategy: :one_for_one, name: MyApp.Supervisor]
-  Supervisor.start_link(children, opts)
-end
-```
-
-The client goes after the endpoint so the port is bound before
+The `Code.ensure_loaded?` guard means the app compiles and runs fine
+in prod and test where busybody isn't a dependency. The client goes
+after the endpoint in the children list so the port is bound before
 registration happens.
-
-If you want to gate it so it only runs in dev (and doesn't break
-prod/test builds where busybody isn't available):
-
-```elixir
-children = [
-  MyAppWeb.Endpoint
-] ++ busybody_children()
-
-defp busybody_children do
-  if Code.ensure_loaded?(Busybody.Client) do
-    [{Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}]
-  else
-    []
-  end
-end
-```
 
 ### Client Options
 
