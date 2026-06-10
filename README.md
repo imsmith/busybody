@@ -113,7 +113,9 @@ After running the installer, just `mix deps.get` and start your app.
 
 ### What the installer does
 
-It makes two changes. In `mix.exs`, it adds the dep:
+The installer is an Igniter task — it patches your project's AST, so it is
+robust to formatting and idempotent (safe to re-run). It makes two changes.
+In `mix.exs`, it adds the dep:
 
     {:busybody, path: "../busybody", only: :dev}
 

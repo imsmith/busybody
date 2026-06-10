@@ -1,241 +1,130 @@
 defmodule Mix.Tasks.Busybody.Install do
+  @shortdoc "Install the Busybody client into this Phoenix app"
   @moduledoc """
-  Installs the Busybody client into a Phoenix application.
-
-  Run from inside your Phoenix project:
+  Installs the Busybody dev directory client into a Phoenix application.
 
       mix busybody.install
 
-  This task:
-
-    1. Adds `{:busybody, path: "../busybody", only: :dev}` to your deps
-       (if not already present)
-    2. Adds `Busybody.Client` to your supervision tree with a
-       `Code.ensure_loaded?/1` guard so it only runs when the dep
-       is available
+  Adds `{:busybody, path: "../busybody", only: :dev}` and wires
+  `Busybody.Client` into the supervision tree behind a
+  `Code.ensure_loaded?/1` guard so prod/test compile without the dep.
 
   ## Options
 
-    * `--name` - app name to register (defaults to your OTP app name)
-    * `--path` - path to busybody (defaults to `../busybody`)
+    * `--name` - app name to register (default: OTP app name)
+    * `--path` - path to busybody (default `../busybody`)
     * `--git`  - use a git dep instead of a path dep
-
-  ## Examples
-
-      mix busybody.install
-      mix busybody.install --name my_cool_app
-      mix busybody.install --git https://github.com/imsmith/busybody.git
-
   """
 
-  @shortdoc "Install Busybody client into this Phoenix app"
+  use Igniter.Mix.Task
 
-  use Mix.Task
+  @impl Igniter.Mix.Task
+  def info(_argv, _composing_task) do
+    %Igniter.Mix.Task.Info{
+      group: :busybody,
+      example: "mix busybody.install --name my_app",
+      schema: [name: :string, path: :string, git: :string]
+    }
+  end
 
-  @impl true
-  def run(args) do
-    {opts, _, _} =
-      OptionParser.parse(args,
-        strict: [name: :string, path: :string, git: :string]
-      )
+  @impl Igniter.Mix.Task
+  def igniter(igniter) do
+    opts = igniter.args.options
+    app_name = opts[:name] || to_string(Igniter.Project.Application.app_name(igniter))
+    {igniter, endpoint} = endpoint_module(igniter)
 
-    app_name = opts[:name] || to_string(Mix.Project.config()[:app])
-    dep_source = dep_source(opts)
+    igniter
+    |> Igniter.Project.Deps.add_dep(busybody_dep(opts))
+    |> wire_supervision(app_name, endpoint)
+    |> Igniter.add_notice("""
+    Busybody client installed.
 
-    mix_file = Path.join(File.cwd!(), "mix.exs")
-    app_file = find_application_ex()
-    endpoint = infer_endpoint()
-
-    patch_mix_exs(mix_file, dep_source)
-    patch_application_ex(app_file, app_name, endpoint)
-
-    Mix.shell().info("""
-
-    Done! Next steps:
-
-      1. Run `mix deps.get`
-      2. Start busybody: `cd #{busybody_path(opts)} && mix phx.server`
-      3. Start this app: `mix phx.server`
+      1. Run `mix deps.get`.
+      2. Start busybody: `cd ../busybody && mix phx.server`.
+      3. Start this app: `mix phx.server`.
       4. Visit http://localhost:5150
     """)
   end
 
-  # -- mix.exs patching --
-
-  defp patch_mix_exs(mix_file, dep_source) do
-    contents = File.read!(mix_file)
-
-    if contents =~ ":busybody" do
-      Mix.shell().info("mix.exs already contains :busybody dep, skipping")
-    else
-      new_contents = inject_dep(contents, dep_source)
-      File.write!(mix_file, new_contents)
-      Mix.shell().info("Added :busybody dep to mix.exs")
-    end
+  defp endpoint_module(igniter) do
+    {igniter, router} = Igniter.Libs.Phoenix.select_router(igniter)
+    {igniter, endpoint} = Igniter.Libs.Phoenix.select_endpoint(igniter, router)
+    {igniter, endpoint}
   end
 
-  defp inject_dep(contents, dep_string) do
-    # Find the last line before the closing ] of the deps list.
-    # The deps list ends with `    ]` on its own line.
-    # We insert our dep before that closing bracket.
-    #
-    # We also ensure the previous dep has a trailing comma.
-    lines = String.split(contents, "\n")
+  defp wire_supervision(igniter, app_name, endpoint) do
+    app_module = Igniter.Project.Application.app_module(igniter)
 
-    # Find the deps function and its closing bracket
-    {in_deps, bracket_idx} = find_deps_bracket(lines)
+    igniter
+    |> append_children_call(app_module)
+    |> add_helper(app_module, app_name, endpoint)
+  end
 
-    unless in_deps do
-      Mix.raise("""
-      Could not find deps function in mix.exs.
-      Add this manually to your deps:
-
-          #{dep_string}
-      """)
-    end
-
-    # Ensure the line before the bracket ends with a comma
-    prev_idx = bracket_idx - 1
-    prev_line = Enum.at(lines, prev_idx)
-
-    lines =
-      if String.trim(prev_line) != "" and not String.ends_with?(String.trim_trailing(prev_line), ",") do
-        List.replace_at(lines, prev_idx, String.trim_trailing(prev_line) <> ",")
+  defp append_children_call(igniter, app_module) do
+    Igniter.Project.Module.find_and_update_module!(igniter, app_module, fn zipper ->
+      with {:ok, zipper} <- Igniter.Code.Function.move_to_def(zipper, :start, 2),
+           {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :=,
+               2,
+               fn call ->
+                 Igniter.Code.Function.argument_matches_predicate?(call, 0, fn arg ->
+                   match?({:children, _, ctx} when is_atom(ctx), Sourceror.Zipper.node(arg))
+                 end)
+               end
+             ),
+           {:ok, list_zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1) do
+        if already_appended?(list_zipper) do
+          {:ok, list_zipper}
+        else
+          {:ok,
+           Sourceror.Zipper.update(list_zipper, fn list_ast ->
+             quote do
+               unquote(list_ast) ++ busybody_children()
+             end
+           end)}
+        end
       else
-        lines
-      end
-
-    # Insert the new dep
-    lines
-    |> List.insert_at(bracket_idx, "      #{dep_string}")
-    |> Enum.join("\n")
-  end
-
-  defp find_deps_bracket(lines) do
-    lines
-    |> Enum.with_index()
-    |> Enum.reduce({false, nil, 0}, fn {line, idx}, {in_deps, found, depth} ->
-      cond do
-        found ->
-          {in_deps, found, depth}
-
-        not in_deps and line =~ ~r/defp? deps do/ ->
-          {true, nil, depth}
-
-        in_deps and line =~ ~r/\[/ ->
-          new_depth = depth + count_char(line, ?[) - count_char(line, ?])
-
-          if new_depth <= 0 do
-            {true, idx, 0}
-          else
-            {true, nil, new_depth}
-          end
-
-        in_deps and line =~ ~r/\]/ ->
-          new_depth = depth + count_char(line, ?[) - count_char(line, ?])
-
-          if new_depth <= 0 do
-            {true, idx, 0}
-          else
-            {true, nil, new_depth}
-          end
-
-        true ->
-          {in_deps, found, depth}
+        _ ->
+          {:warning,
+           "busybody.install: could not find a `children = [...]` assignment in " <>
+             "#{inspect(app_module)}.start/2. Add `++ busybody_children()` to your " <>
+             "children list manually."}
       end
     end)
-    |> then(fn {in_deps, bracket_idx, _} -> {in_deps, bracket_idx} end)
   end
 
-  defp count_char(string, char) do
-    string |> to_charlist() |> Enum.count(&(&1 == char))
+  defp already_appended?(zipper) do
+    match?({:++, _, [_, {:busybody_children, _, _}]}, zipper.node)
   end
 
-  # -- application.ex patching --
+  defp add_helper(igniter, app_module, app_name, endpoint) do
+    endpoint_kw = if endpoint, do: ", endpoint: #{inspect(endpoint)}", else: ""
 
-  defp patch_application_ex(app_file, app_name, endpoint) do
-    contents = File.read!(app_file)
+    Igniter.Project.Module.find_and_update_module!(igniter, app_module, fn zipper ->
+      case Igniter.Code.Function.move_to_defp(zipper, :busybody_children, 0) do
+        {:ok, _} ->
+          {:ok, zipper}
 
-    if contents =~ "Busybody.Client" do
-      Mix.shell().info("application.ex already references Busybody.Client, skipping")
-    else
-      new_contents =
-        contents
-        |> inject_children_concat()
-        |> inject_helper_function(app_name, endpoint)
-
-      File.write!(app_file, new_contents)
-      Mix.shell().info("Added Busybody.Client to supervision tree in #{app_file}")
-    end
-  end
-
-  defp inject_children_concat(contents) do
-    # Find `    ]\n\n` after the children list — the ] is at 4-space indent,
-    # followed by a blank line or a line starting with spaces and # or opts or Supervisor
-    case Regex.replace(
-           ~r/(    \])\n(\n\s+(#|opts|Supervisor))/,
-           contents,
-           "\\1 ++ busybody_children()\n\\2",
-           global: false
-         ) do
-      ^contents ->
-        Mix.raise("Could not find children list in application.ex. Add Busybody.Client manually.")
-
-      updated ->
-        updated
-    end
-  end
-
-  defp inject_helper_function(contents, app_name, endpoint) do
-    helper = """
-
-      defp busybody_children do
-        if Code.ensure_loaded?(Busybody.Client) do
-          [{Busybody.Client, name: "#{app_name}", endpoint: #{endpoint}}]
-        else
-          []
-        end
+        _ ->
+          {:ok,
+           Igniter.Code.Common.add_code(zipper, """
+           defp busybody_children do
+             if Code.ensure_loaded?(Busybody.Client) do
+               [{Busybody.Client, name: #{inspect(app_name)}#{endpoint_kw}}]
+             else
+               []
+             end
+           end
+           """)}
       end
-    """
-
-    # Insert before the final `end` of the module
-    String.replace(contents, ~r/\nend\s*\z/, "\n" <> helper <> "end\n")
+    end)
   end
 
-  # -- option helpers --
-
-  defp dep_source(opts) do
-    cond do
-      opts[:git] ->
-        "{:busybody, git: \"#{opts[:git]}\", only: :dev}"
-
-      true ->
-        path = opts[:path] || "../busybody"
-        "{:busybody, path: \"#{path}\", only: :dev}"
-    end
-  end
-
-  defp busybody_path(opts) do
-    if opts[:git], do: "busybody", else: opts[:path] || "../busybody"
-  end
-
-  defp find_application_ex do
-    app = Mix.Project.config()[:app]
-    path = Path.join(["lib", to_string(app), "application.ex"])
-
-    unless File.exists?(path) do
-      Mix.raise("Could not find #{path}")
-    end
-
-    path
-  end
-
-  defp infer_endpoint do
-    app = Mix.Project.config()[:app]
-
-    app
-    |> to_string()
-    |> Macro.camelize()
-    |> then(&"#{&1}Web.Endpoint")
+  defp busybody_dep(opts) do
+    if opts[:git],
+      do: {:busybody, git: opts[:git], only: :dev},
+      else: {:busybody, path: opts[:path] || "../busybody", only: :dev}
   end
 end
