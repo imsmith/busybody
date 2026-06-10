@@ -36,6 +36,14 @@ defmodule Mix.Tasks.Busybody.Install do
     igniter
     |> Igniter.Project.Deps.add_dep(busybody_dep(opts))
     |> wire_supervision(app_name, endpoint)
+    |> Igniter.add_notice("""
+    Busybody client installed.
+
+      1. Run `mix deps.get`.
+      2. Start busybody: `cd ../busybody && mix phx.server`.
+      3. Start this app: `mix phx.server`.
+      4. Visit http://localhost:5150
+    """)
   end
 
   defp endpoint_module(igniter) do
@@ -88,6 +96,8 @@ defmodule Mix.Tasks.Busybody.Install do
   end
 
   defp add_helper(igniter, app_module, app_name, endpoint) do
+    endpoint_kw = if endpoint, do: ", endpoint: #{inspect(endpoint)}", else: ""
+
     Igniter.Project.Module.find_and_update_module!(igniter, app_module, fn zipper ->
       case Igniter.Code.Function.move_to_defp(zipper, :busybody_children, 0) do
         {:ok, _} ->
@@ -98,7 +108,7 @@ defmodule Mix.Tasks.Busybody.Install do
            Igniter.Code.Common.add_code(zipper, """
            defp busybody_children do
              if Code.ensure_loaded?(Busybody.Client) do
-               [{Busybody.Client, name: "#{app_name}", endpoint: #{inspect(endpoint)}}]
+               [{Busybody.Client, name: "#{app_name}"#{endpoint_kw}}]
              else
                []
              end

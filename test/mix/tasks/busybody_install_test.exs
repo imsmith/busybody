@@ -32,4 +32,15 @@ defmodule Mix.Tasks.Busybody.InstallTest do
     + |  end
     """)
   end
+
+  test "is idempotent — a second run does not double-append or duplicate the helper" do
+    {:ok, after_first, _} =
+      phx_test_project()
+      |> Igniter.compose_task("busybody.install", [])
+      |> apply_igniter()
+
+    after_first
+    |> Igniter.compose_task("busybody.install", [])
+    |> assert_unchanged()
+  end
 end
