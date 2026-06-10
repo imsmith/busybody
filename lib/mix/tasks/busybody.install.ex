@@ -15,6 +15,10 @@ if Code.ensure_loaded?(Igniter) do
       * `--name` - app name to register (default: OTP app name)
       * `--path` - path to busybody (default `../busybody`)
       * `--git`  - use a git dep instead of a path dep
+
+    Requires [Igniter](https://hexdocs.pm/igniter) in the host project's deps
+    (`{:igniter, "~> 0.8", only: [:dev, :test]}`). Without it, this task is an
+    inert stub that prints an install hint.
     """
 
     use Igniter.Mix.Task
