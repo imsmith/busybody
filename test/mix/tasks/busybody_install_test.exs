@@ -43,4 +43,40 @@ defmodule Mix.Tasks.Busybody.InstallTest do
     |> Igniter.compose_task("busybody.install", [])
     |> assert_unchanged()
   end
+
+  test "degrades gracefully when application.ex has no children assignment" do
+    # phx_test_project generates an application.ex with `children = [...]`.
+    # We replace it wholesale via the Rewrite API to simulate an app that uses
+    # an inlined Supervisor.start_link (no `children =` binding at all).
+    no_children_app = """
+    defmodule Test.Application do
+      @moduledoc false
+      use Application
+
+      @impl true
+      def start(_type, _args) do
+        Supervisor.start_link([], strategy: :one_for_one, name: Test.Supervisor)
+      end
+    end
+    """
+
+    igniter =
+      phx_test_project()
+      |> then(fn ign ->
+        source = Rewrite.source!(ign.rewrite, "lib/test/application.ex")
+        new_source = Rewrite.Source.update(source, :content, no_children_app)
+        %{ign | rewrite: Rewrite.update!(ign.rewrite, new_source)}
+      end)
+      |> Igniter.compose_task("busybody.install", [])
+
+    # Dep patch is present in the pending igniter (before apply).
+    igniter
+    |> assert_has_patch("mix.exs", """
+    + |      {:busybody, [path: "../busybody", only: :dev]},
+    """)
+
+    # Must not raise; warning emitted about missing children assignment.
+    {:ok, _result, %{warnings: warnings}} = apply_igniter(igniter)
+    assert Enum.any?(warnings, &(&1 =~ "busybody_children"))
+  end
 end

@@ -86,7 +86,11 @@ defmodule Mix.Tasks.Busybody.Install do
            end)}
         end
       else
-        _ -> :error
+        _ ->
+          {:warning,
+           "busybody.install: could not find a `children = [...]` assignment in " <>
+             "#{inspect(app_module)}.start/2. Add `++ busybody_children()` to your " <>
+             "children list manually."}
       end
     end)
   end
@@ -108,7 +112,7 @@ defmodule Mix.Tasks.Busybody.Install do
            Igniter.Code.Common.add_code(zipper, """
            defp busybody_children do
              if Code.ensure_loaded?(Busybody.Client) do
-               [{Busybody.Client, name: "#{app_name}"#{endpoint_kw}}]
+               [{Busybody.Client, name: #{inspect(app_name)}#{endpoint_kw}}]
              else
                []
              end
@@ -119,9 +123,8 @@ defmodule Mix.Tasks.Busybody.Install do
   end
 
   defp busybody_dep(opts) do
-    cond do
-      opts[:git] -> {:busybody, git: opts[:git], only: :dev}
-      true -> {:busybody, path: opts[:path] || "../busybody", only: :dev}
-    end
+    if opts[:git],
+      do: {:busybody, git: opts[:git], only: :dev},
+      else: {:busybody, path: opts[:path] || "../busybody", only: :dev}
   end
 end
