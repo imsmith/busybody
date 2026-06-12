@@ -12,16 +12,20 @@ defmodule BusybodyWeb.DirectoryLiveTest do
   test "renders empty state", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/")
     assert html =~ "busybody"
-    assert html =~ "0"
+    assert html =~ "0 SERVICES"
+    assert html =~ "No services registered"
   end
 
-  test "shows registered apps", %{conn: conn} do
+  test "shows registered apps with OK status", %{conn: conn} do
     Busybody.Registry.register(%{name: "paperclip", port: 4829, pid: "100", host: "devbox"})
 
     {:ok, _view, html} = live(conn, "/")
     assert html =~ "paperclip"
     assert html =~ "4829"
     assert html =~ "devbox"
+    # freshly registered -> OK, encoded as glyph + word, not color alone
+    assert html =~ "OK"
+    assert html =~ "1 SERVICE"
   end
 
   test "updates in real-time when app registers", %{conn: conn} do
