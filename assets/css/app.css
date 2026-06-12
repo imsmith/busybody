@@ -17,6 +17,37 @@
   themes: false;
 }
 
+/* ── Martian Mono (OFL-1.1) — the design system's mono "voice" ──────────────
+   Self-hosted; see priv/static/fonts/OFL.txt. Served from /fonts via
+   BusybodyWeb.static_paths/0. */
+@font-face {
+  font-family: "Martian Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/martian-mono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Martian Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/martian-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Martian Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/martian-mono-700.woff2") format("woff2");
+}
+
+/* Route Tailwind's `font-mono` utility (used on the page root) through Martian
+   Mono first, then system monospace. Tailwind v4 reads the stack from @theme. */
+@theme {
+  --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
 /* daisyUI theme plugin. You can update this file by fetching the latest version with:
   curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui-theme.js
   We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
