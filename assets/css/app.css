@@ -26,32 +26,33 @@
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: oklch(30.33% 0.016 252.42);
-  --color-base-200: oklch(25.26% 0.014 253.1);
-  --color-base-300: oklch(20.15% 0.012 254.09);
-  --color-base-content: oklch(97.807% 0.029 256.847);
-  --color-primary: oklch(58% 0.233 277.117);
-  --color-primary-content: oklch(96% 0.018 272.314);
-  --color-secondary: oklch(58% 0.233 277.117);
-  --color-secondary-content: oklch(96% 0.018 272.314);
-  --color-accent: oklch(60% 0.25 292.717);
-  --color-accent-content: oklch(96% 0.016 293.756);
-  --color-neutral: oklch(37% 0.044 257.287);
-  --color-neutral-content: oklch(98% 0.003 247.858);
-  --color-info: oklch(58% 0.158 241.966);
-  --color-info-content: oklch(97% 0.013 236.62);
-  --color-success: oklch(60% 0.118 184.704);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
+  /* Tron dark — design-system tokens/color/themes.edn :tron :dark (chrome only) */
+  --color-base-100: #05080a;   /* bg */
+  --color-base-200: #0a141a;   /* surface */
+  --color-base-300: #0f1c24;   /* raised step (derived: one stop above surface) */
+  --color-base-content: #cfeff5; /* text (muted = base-content at /60 in markup) */
+  --color-primary: #00E5FF;    /* accent */
+  --color-primary-content: #000000; /* on-accent */
+  --color-secondary: #00E5FF;
+  --color-secondary-content: #000000;
+  --color-accent: #00E5FF;
+  --color-accent-content: #000000;
+  --color-neutral: #6d8288;    /* border */
+  --color-neutral-content: #cfeff5;
+  --color-info: #00E5FF;
+  --color-info-content: #000000;
+  --color-success: #2fd44e;
+  --color-success-content: #05080a;
+  --color-warning: #ffd400;
+  --color-warning-content: #05080a;
+  --color-error: #ff2740;
+  --color-error-content: #ffffff;
+  --border: 1.5px;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
   --size-selector: 0.21875rem;
   --size-field: 0.21875rem;
-  --border: 1.5px;
   --depth: 1;
   --noise: 0;
 }
@@ -61,32 +62,33 @@
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(99.5% 0.005 90);
-  --color-base-200: oklch(97% 0.008 85);
-  --color-base-300: oklch(93% 0.012 80);
-  --color-base-content: oklch(25% 0.02 50);
-  --color-primary: oklch(70% 0.213 47.604);
-  --color-primary-content: oklch(98% 0.016 73.684);
-  --color-secondary: oklch(55% 0.027 264.364);
-  --color-secondary-content: oklch(98% 0.002 247.839);
-  --color-accent: oklch(0% 0 0);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(44% 0.017 285.786);
-  --color-neutral-content: oklch(98% 0 0);
-  --color-info: oklch(62% 0.214 259.815);
-  --color-info-content: oklch(97% 0.014 254.604);
-  --color-success: oklch(70% 0.14 182.503);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
+  /* Tron light — design-system tokens/color/themes.edn :tron :light (chrome only) */
+  --color-base-100: #eef7f9;   /* bg */
+  --color-base-200: #ffffff;   /* surface */
+  --color-base-300: #dfeaed;   /* raised/border step (derived) */
+  --color-base-content: #07232a; /* text (muted = base-content at /60 in markup) */
+  --color-primary: #008c9e;    /* accent (darkened for light per themes.edn) */
+  --color-primary-content: #ffffff; /* on-accent */
+  --color-secondary: #008c9e;
+  --color-secondary-content: #ffffff;
+  --color-accent: #008c9e;
+  --color-accent-content: #ffffff;
+  --color-neutral: #adb6b9;    /* border */
+  --color-neutral-content: #07232a;
+  --color-info: #008c9e;
+  --color-info-content: #ffffff;
+  --color-success: #2fd44e;
+  --color-success-content: #07232a;
+  --color-warning: #ffd400;
+  --color-warning-content: #07232a;
+  --color-error: #ff2740;
+  --color-error-content: #ffffff;
+  --border: 1.5px;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
   --size-selector: 0.21875rem;
   --size-field: 0.21875rem;
-  --border: 1.5px;
   --depth: 1;
   --noise: 0;
 }
@@ -103,3 +105,54 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* ── Design system: status (theme-invariant) ───────────────────────────────
+   Values from design-system tokens/color/status.edn. These do NOT live in a
+   theme block — the light/dark switcher must not touch data color. */
+:root {
+  --status-ok:   #2fd44e; /* status.edn :low     */
+  --status-warn: #ffd400; /* status.edn :medium  */
+  --status-down: #ff2740; /* status.edn :critical */
+  --ds-glow:     #00E5FF; /* themes.edn :tron :glow */
+}
+
+.st-ok   { color: var(--status-ok); }
+.st-warn { color: var(--status-warn); }
+.st-down { color: var(--status-down); }
+
+/* A DOWN card takes a critical border (component matrix: error state). */
+.service-card.is-down { border-color: var(--status-down); }
+
+/* ── Glow (design-system tokens/material.edn): dark surfaces only ──────────── */
+.wordmark { text-shadow: 0 0 8px color-mix(in srgb, var(--ds-glow) 55%, transparent); }
+.service-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-glow) 25%, transparent);
+  transform: translateY(-1px);
+}
+/* The critical border must survive hover — never lose the error signal. */
+.service-card.is-down:hover { border-color: var(--status-down); }
+/* Suppress glow on light surfaces (glow sits on dark material only).
+   Explicit light selection: */
+[data-theme="light"] .wordmark { text-shadow: none; }
+[data-theme="light"] .service-card:hover { box-shadow: none; }
+/* System mode (no explicit theme) on a light OS — but NOT when the user has
+   explicitly chosen dark (data-theme="dark") on a light OS. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .wordmark { text-shadow: none; }
+  :root:not([data-theme]) .service-card:hover { box-shadow: none; }
+}
+
+/* ── Focus (design-system component matrix): outline is the signal ────────── */
+.service-card:focus-visible {
+  outline: 2px solid var(--color-base-content);
+  outline-offset: 4px;
+}
+
+/* ── The one status motion: pulse on DOWN (tokens/motion.edn) ──────────────── */
+@keyframes ds-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.st-down { animation: ds-pulse 1500ms ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .st-down { animation: none; }
+}
