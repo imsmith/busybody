@@ -144,6 +144,7 @@
   --status-ok:   #2fd44e; /* status.edn :low     */
   --status-warn: #ffd400; /* status.edn :medium  */
   --status-down: #ff2740; /* status.edn :critical */
+  /* Named --ds-glow (not --glow) to avoid colliding with any framework var. */
   --ds-glow:     #00E5FF; /* themes.edn :tron :glow */
 }
 
@@ -174,8 +175,10 @@
   :root:not([data-theme]) .service-card:hover { box-shadow: none; }
 }
 
-/* ── Focus (design-system component matrix): outline is the signal ────────── */
-.service-card:focus-visible {
+/* ── Focus (design-system component matrix): outline is the signal ──────────
+   On the card links AND the theme-switcher buttons (which carry data-phx-theme). */
+.service-card:focus-visible,
+[data-phx-theme]:focus-visible {
   outline: 2px solid var(--color-base-content);
   outline-offset: 4px;
 }
