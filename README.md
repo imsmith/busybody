@@ -147,19 +147,31 @@ registration happens.
 | `registry_url` | `http://localhost:5150` | Where busybody is running |
 | `host` | system hostname | Host shown in the directory and used for health checks |
 
-### Without the Client Library
+## Non-Elixir apps
 
-You don't need the client library. Any HTTP client works:
+Busybody's API is language-neutral: any HTTP app can register by POSTing
+its `name`, `port`, `pid`, and `host`, and re-POSTing every 60 seconds.
 
-```bash
-curl -X POST http://localhost:5150/api/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"myapp","port":4000,"pid":"12345","host":"localhost"}'
-```
+For the same "add one thing and it registers + heartbeats" experience the
+Elixir client gives, use **[busybody-client](../busybody-client)** — a
+process wrapper shipped as both a static Go binary and a POSIX-sh script:
 
-Re-send it every 60 seconds to stay in the directory. Or don't — a
-one-shot registration works too, the entry just won't survive a
-busybody restart.
+    busybody run --name myapp -- ./my-server        # binary, auto-discovers the port
+    busybody-run --name myapp --port 4000 -- ./run  # script, explicit port
+
+It launches your app, discovers the listening port, registers, and
+heartbeats — best-effort, so a downed busybody never affects your app.
+
+### Raw HTTP
+
+You don't need any client. Any HTTP tool works:
+
+    curl -X POST http://localhost:5150/api/register \
+      -H "Content-Type: application/json" \
+      -d '{"name":"myapp","port":4000,"pid":"12345","host":"localhost"}'
+
+Re-send it every 60 seconds to stay in the directory. A one-shot
+registration works too — the entry just won't survive a busybody restart.
 
 ## License
 
