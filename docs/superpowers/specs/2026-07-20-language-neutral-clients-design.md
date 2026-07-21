@@ -142,8 +142,16 @@ interactions are best-effort:
 
 ## File Layout
 
+The clients live in their own repository, `~/github/busybody-client`
+(currently an empty directory, not yet a git repo). Keeping them out of
+the Elixir `busybody` repo avoids mixing a Go/shell toolchain into a
+Phoenix project and lets the clients version and release independently.
+
 ```text
-clients/
+busybody-client/           # standalone git repo
+  README.md
+  LICENSE                  # AGPL-3.0
+  Makefile                 # build the Go binary
   sh/
     busybody-run
   go/
@@ -152,18 +160,17 @@ clients/
     run.go
     discover_linux.go
     *_test.go
-Makefile   # target to build the Go binary
 ```
-
-The `clients/` directory keeps the standalone artifacts cleanly
-separated from the Elixir application.
 
 ## Documentation
 
-The README gains a "Non-Elixir apps" section, expanding today's "Without
-the Client Library" content. It shows the wrapper usage for both
-artifacts with language-neutral examples (e.g. `-- ./myserver`,
+`busybody-client` gets its own `README.md` documenting the wrapper usage
+for both artifacts, with language-neutral examples (e.g. `-- ./myserver`,
 `-- python -m http.server`), not JavaScript-ecosystem examples.
+
+The main `busybody` repo's README gains a short "Non-Elixir apps" pointer
+that expands today's "Without the Client Library" content and links to
+the `busybody-client` repo.
 
 ## Out of Scope (YAGNI)
 
