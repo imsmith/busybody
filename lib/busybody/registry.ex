@@ -13,9 +13,23 @@ defmodule Busybody.Registry do
   @topic "registry"
   @max_entries 100
 
+  @typedoc "Fields a caller supplies when registering."
+  @type attrs :: %{name: String.t(), port: 1..65_535, pid: String.t(), host: String.t()}
+
+  @typedoc "A stored entry: the supplied fields plus registry timestamps."
+  @type entry :: %{
+          name: String.t(),
+          port: 1..65_535,
+          pid: String.t(),
+          host: String.t(),
+          registered_at: DateTime.t(),
+          last_seen: DateTime.t()
+        }
+
   # Client API
 
   @doc "Start the registry, optionally with a custom `:name`."
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, %{}, name: name)
@@ -37,6 +51,7 @@ defmodule Busybody.Registry do
       "myapp"
 
   """
+  @spec register(GenServer.server(), attrs()) :: :ok | {:error, :registry_full}
   def register(server \\ __MODULE__, attrs) do
     GenServer.call(server, {:register, attrs})
   end
@@ -54,6 +69,7 @@ defmodule Busybody.Registry do
       []
 
   """
+  @spec deregister(GenServer.server(), String.t()) :: :ok
   def deregister(server \\ __MODULE__, name) do
     GenServer.call(server, {:deregister, name})
   end
@@ -68,11 +84,13 @@ defmodule Busybody.Registry do
       []
 
   """
+  @spec list(GenServer.server()) :: [entry()]
   def list(server \\ __MODULE__) do
     GenServer.call(server, :list)
   end
 
   @doc "Subscribe to registry change notifications via PubSub."
+  @spec subscribe() :: :ok | {:error, term()}
   def subscribe do
     Phoenix.PubSub.subscribe(@pubsub, @topic)
   end

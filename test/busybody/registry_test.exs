@@ -67,21 +67,45 @@ defmodule Busybody.RegistryTest do
   describe "capacity" do
     test "rejects new registrations when full", %{registry: registry} do
       for i <- 1..100 do
-        :ok = Registry.register(registry, %{name: "app#{i}", port: 4000 + i, pid: "#{i}", host: "localhost"})
+        :ok =
+          Registry.register(registry, %{
+            name: "app#{i}",
+            port: 4000 + i,
+            pid: "#{i}",
+            host: "localhost"
+          })
       end
 
       assert {:error, :registry_full} =
-               Registry.register(registry, %{name: "overflow", port: 5000, pid: "101", host: "localhost"})
+               Registry.register(registry, %{
+                 name: "overflow",
+                 port: 5000,
+                 pid: "101",
+                 host: "localhost"
+               })
 
       assert length(Registry.list(registry)) == 100
     end
 
     test "allows upserts when full", %{registry: registry} do
       for i <- 1..100 do
-        :ok = Registry.register(registry, %{name: "app#{i}", port: 4000 + i, pid: "#{i}", host: "localhost"})
+        :ok =
+          Registry.register(registry, %{
+            name: "app#{i}",
+            port: 4000 + i,
+            pid: "#{i}",
+            host: "localhost"
+          })
       end
 
-      assert :ok = Registry.register(registry, %{name: "app1", port: 9999, pid: "1", host: "localhost"})
+      assert :ok =
+               Registry.register(registry, %{
+                 name: "app1",
+                 port: 9999,
+                 pid: "1",
+                 host: "localhost"
+               })
+
       app = Enum.find(Registry.list(registry), &(&1.name == "app1"))
       assert app.port == 9999
     end

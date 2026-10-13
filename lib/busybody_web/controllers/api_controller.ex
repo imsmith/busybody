@@ -9,9 +9,9 @@ defmodule BusybodyWeb.ApiController do
   use BusybodyWeb, :controller
 
   def register(conn, %{"name" => name, "port" => port, "pid" => pid, "host" => host})
-      when is_binary(name) and byte_size(name) > 0
-      and is_integer(port) and port in 1..65_535
-      and is_binary(pid) and is_binary(host) and byte_size(host) > 0 do
+      when is_binary(name) and byte_size(name) > 0 and
+             is_integer(port) and port in 1..65_535 and
+             is_binary(pid) and is_binary(host) and byte_size(host) > 0 do
     case Busybody.Registry.register(%{name: name, port: port, pid: pid, host: host}) do
       :ok ->
         json(conn, %{status: "ok"})
@@ -26,7 +26,10 @@ defmodule BusybodyWeb.ApiController do
   def register(conn, _params) do
     conn
     |> put_status(422)
-    |> json(%{error: "missing or invalid fields: name (string), port (1-65535), pid (string), host (string)"})
+    |> json(%{
+      error:
+        "missing or invalid fields: name (string), port (1-65535), pid (string), host (string)"
+    })
   end
 
   def index(conn, _params) do

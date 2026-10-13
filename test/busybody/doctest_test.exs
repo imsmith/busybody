@@ -4,4 +4,5 @@ defmodule Busybody.DoctestTest do
 
   doctest Busybody.Registry
   doctest Busybody.Client
+  doctest BusybodyWeb.Status
 end

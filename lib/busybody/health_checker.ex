@@ -14,6 +14,7 @@ defmodule Busybody.HealthChecker do
   @max_concurrency 10
 
   @doc "Start the health checker GenServer."
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     interval = Keyword.get(opts, :interval, @default_interval)
     registry = Keyword.get(opts, :registry, Busybody.Registry)
@@ -28,6 +29,7 @@ defmodule Busybody.HealthChecker do
 
   Accepts an explicit registry pid/name; defaults to `Busybody.Registry`.
   """
+  @spec check_all(GenServer.server()) :: :ok
   def check_all(registry \\ Busybody.Registry) do
     apps = Busybody.Registry.list(registry)
 

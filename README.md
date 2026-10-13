@@ -72,8 +72,9 @@ name/pid/host must be non-empty strings.
 **LiveView** (`BusybodyWeb.DirectoryLive`) — The directory page at `/`.
 Subscribes to PubSub events from the Registry. Cards show the app
 name, host, port, PID, and a relative "last seen" timestamp. Each card
-links to the app. Status dots indicate health: green (seen in the last
-60s), amber (stale), red (about to be pruned).
+links to the app. Status is encoded as glyph + word, never color alone:
+`● OK` (seen in the last 60s), `◆ WARN` (stale), `✖ DOWN` (about to be
+pruned). See `BusybodyWeb.Status`.
 
 **Client** (`Busybody.Client`) — A GenServer that other Phoenix apps
 add to their supervision tree. On startup it resolves the app's port
@@ -82,7 +83,8 @@ busybody, and heartbeats every 60 seconds.
 
 ## Setup
 
-Start busybody:
+Requires Elixir 1.20 and Erlang/OTP 29. `.tool-versions` pins both for
+asdf. Start busybody:
 
     cd busybody
     mix setup
@@ -172,6 +174,11 @@ You don't need any client. Any HTTP tool works:
 
 Re-send it every 60 seconds to stay in the directory. A one-shot
 registration works too — the entry just won't survive a busybody restart.
+
+## Development
+
+    mix precommit   # compile --warnings-as-errors, format, test (incl. doctests)
+    mix dialyzer    # type check; first run builds the PLT (slow, cached after)
 
 ## License
 
