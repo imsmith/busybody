@@ -611,7 +611,6 @@ In `lib/busybody/application.ex`, add `Busybody.Registry` and `Busybody.HealthCh
 children = [
   BusybodyWeb.Telemetry,
   {Phoenix.PubSub, name: Busybody.PubSub},
-  {DNSCluster, query: Application.get_env(:busybody, :dns_cluster_query) || :ignore},
   Busybody.Registry,
   Busybody.HealthChecker,
   BusybodyWeb.Endpoint

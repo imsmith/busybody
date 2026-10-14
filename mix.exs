@@ -60,7 +60,6 @@ defmodule Busybody.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26 or ~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:igniter, "~> 0.8", optional: true},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}

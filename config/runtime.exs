@@ -35,8 +35,6 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :busybody, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
   config :busybody, BusybodyWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

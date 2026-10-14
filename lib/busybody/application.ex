@@ -9,7 +9,6 @@ defmodule Busybody.Application do
   def start(_type, _args) do
     children = [
       BusybodyWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:busybody, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Busybody.PubSub},
       Busybody.Registry,
       Busybody.HealthChecker,
