@@ -3,6 +3,5 @@ defmodule Busybody.DoctestTest do
   use ExUnit.Case, async: true
 
   doctest Busybody.Registry
-  doctest Busybody.Client
   doctest BusybodyWeb.Status
 end

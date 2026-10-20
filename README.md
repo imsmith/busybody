@@ -47,7 +47,7 @@ seconds.
 
 ## Architecture
 
-There are five moving parts:
+There are five moving parts (four in this repo, plus the client):
 
 **Registry** (`Busybody.Registry`) — A GenServer holding a map of
 registered apps, keyed by name. Each entry carries the app's name,
@@ -80,7 +80,9 @@ pruned). See `BusybodyWeb.Status`.
 **Client** (`Busybody.Client`) — A GenServer that other Phoenix apps
 add to their supervision tree. On startup it resolves the app's port
 (from the endpoint config or an explicit option), registers with
-busybody, and heartbeats every 60 seconds.
+busybody, and heartbeats every 60 seconds. It ships as its own
+package, `busybody_client`, in the busybody-client repo — see
+[Adding a Client App](#adding-a-client-app).
 
 ## Setup
 
@@ -96,36 +98,56 @@ network, not just localhost.
 
 ## Adding a Client App
 
-The fastest way is the install task. From inside your Phoenix project:
+The client is **not** this app. It is a separate, dependency-free
+library, `busybody_client`, that lives in the
+[busybody-client](https://github.com/imsmith/busybody-client) repo. Adding
+this Phoenix app as a dependency would start a second registry and
+endpoint inside your app and drag Phoenix, LiveView, and the asset
+toolchain along with it. Add the client package instead.
 
-    mix busybody.install
+Three changes. First, the endpoint. The default `phx.new` dev config
+binds a fixed port on loopback, which is exactly the state busybody
+exists to end: a port you have to track, on an address only this host
+can reach. In `config/dev.exs`, let the OS pick the port and listen on
+every interface:
 
-This patches your `mix.exs` and `application.ex` in one shot. It adds
-the dep, wires the client into your supervision tree, and gates it
-behind `Code.ensure_loaded?/1` so it only runs when the dep is
-available (i.e., dev). By default it infers the app name from your
-OTP app and assumes busybody lives at `../busybody`.
+    config :my_app, MyAppWeb.Endpoint,
+      http: [ip: {0, 0, 0, 0}, port: 0]
 
-Options:
+Port `0` means a free port is assigned at bind time and changes on every
+start. `{0, 0, 0, 0}` means the app answers on all IPv4 addresses, so
+other machines, containers, and VMs on the network can reach it by
+hostname, not just `localhost`. Busybody's health checker probes the
+registered host and port from wherever busybody runs, so an app bound
+to loopback on another machine would be pruned as dead.
 
-    mix busybody.install --name my_cool_app
-    mix busybody.install --path ../../tools/busybody
-    mix busybody.install --git https://github.com/imsmith/busybody.git
+Known gap: with `port: 0`, Phoenix url helpers still render `:0` until
+the endpoint's `:url` config is synced to the bound port. See
+`ISSUES.md`.
 
-After running the installer, just `mix deps.get` and start your app.
+Then the dep, in `mix.exs`:
 
-### What the installer does
+    {:busybody_client, github: "imsmith/busybody-client", only: :dev}
 
-The installer is an Igniter task — it patches your project's AST, so it is
-robust to formatting and idempotent (safe to re-run). Because it is an Igniter
-task, your project needs Igniter in its deps
-(`{:igniter, "~> 0.8", only: [:dev, :test]}`) to run it. It makes two changes.
-In `mix.exs`, it adds the dep:
+And the client, in `application.ex`, after your endpoint so the port is
+bound before registration:
 
-    {:busybody, path: "../busybody", only: :dev}
+    children = [
+      MyAppWeb.Endpoint,
+      {Busybody.Client, name: "my_app", endpoint: MyAppWeb.Endpoint}
+    ]
 
-In `application.ex`, it appends `++ busybody_children()` to your
-children list and adds a helper function:
+To group the app with others on the directory page, add `group` to the
+same child spec. It is part of how the app presents itself, like
+`name`, so it lives with `name` and not in `config/`:
+
+    {Busybody.Client, name: "my_app", group: "infra", endpoint: MyAppWeb.Endpoint}
+
+Omit it and the app is ungrouped. The group is sent with every
+registration, so changing it takes effect on the next restart.
+
+If that `application.ex` also boots in prod and test, where the dep is
+absent, guard it:
 
     defp busybody_children do
       if Code.ensure_loaded?(Busybody.Client) do
@@ -135,10 +157,7 @@ children list and adds a helper function:
       end
     end
 
-The `Code.ensure_loaded?` guard means the app compiles and runs fine
-in prod and test where busybody isn't a dependency. The client goes
-after the endpoint in the children list so the port is bound before
-registration happens.
+and append `++ busybody_children()` to the children list.
 
 ### Client Options
 

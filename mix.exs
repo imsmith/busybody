@@ -23,7 +23,7 @@ defmodule Busybody.MixProject do
   def application do
     [
       mod: {Busybody.Application, []},
-      extra_applications: [:logger, :runtime_tools, :inets]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -61,7 +61,6 @@ defmodule Busybody.MixProject do
       {:gettext, "~> 0.26 or ~> 1.0"},
       {:jason, "~> 1.2"},
       {:bandit, "~> 1.5"},
-      {:igniter, "~> 0.8", optional: true},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end

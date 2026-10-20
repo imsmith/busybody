@@ -9,7 +9,7 @@ defmodule Busybody do
 
     * `Busybody.Registry` — in-memory map of registered apps, broadcast over PubSub
     * `Busybody.HealthChecker` — TCP-probes each entry every 30s and prunes the unreachable
-    * `Busybody.Client` — GenServer consumer apps add to their supervision tree
+    * `Busybody.Client` — the consumer-side GenServer, shipped separately as the `busybody_client` package in the busybody-client repo
 
   The web layer lives under `BusybodyWeb`.
   """
