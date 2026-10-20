@@ -1,0 +1,59 @@
+// As-built components of the Busybody Web container.
+// Derived from: lib/busybody_web/endpoint.ex, router.ex, controllers/api_controller.ex,
+// live/directory_live.ex, status.ex, telemetry.ex.
+
+model {
+    extend busybody.web {
+        component endpoint {
+            title 'BusybodyWeb.Endpoint'
+            description 'Phoenix endpoint: static files, the LiveView socket, parsers, session, then the router. Binds 0.0.0.0:5150 in dev and an ephemeral port in test.'
+            technology 'Phoenix.Endpoint / Bandit'
+        }
+
+        component router {
+            title 'BusybodyWeb.Router'
+            description 'Two pipelines. :browser serves live "/" as DirectoryLive; :api serves POST /api/register and GET /api/apps. No authentication anywhere — this is a dev-box tool.'
+            technology 'Phoenix.Router'
+        }
+
+        component apicontroller {
+            title 'BusybodyWeb.ApiController'
+            description 'register/2 pattern-matches and guards the payload (non-empty name, integer port in 1..65535, binary pid and host) — anything else is a 422 with the field contract in the body. A full registry answers 503. index/2 lists all entries with ISO8601 timestamps.'
+            technology 'Phoenix.Controller'
+        }
+
+        component directorylive {
+            title 'BusybodyWeb.DirectoryLive'
+            description 'The card grid. Subscribes to the registry PubSub topic so cards appear and vanish without polling, plus a 5s tick that only refreshes relative timestamps.'
+            technology 'Phoenix.LiveView'
+        }
+
+        component status {
+            title 'BusybodyWeb.Status'
+            description 'Maps last_seen age onto a status: ok under 60s, warn under 90s, down at or beyond 90s. Encodes as color plus glyph plus word, never color alone.'
+            technology 'Elixir module'
+        }
+
+        component telemetry {
+            title 'BusybodyWeb.Telemetry'
+            description 'Telemetry supervisor and metric definitions.'
+            technology 'telemetry_metrics / telemetry_poller'
+        }
+
+        endpoint -[ipc]-> router "Dispatches"
+        router -[ipc]-> apicontroller "POST /api/register, GET /api/apps"
+        router -[ipc]-> directorylive "live /"
+        directorylive -[ipc]-> status "classify/2 per card"
+    }
+
+    busybody.web.apicontroller -[ipc]-> busybody.registry "register/2 and list/1"
+    busybody.web.directorylive -[ipc]-> busybody.registry "list/1 on mount, subscribe/0 for changes"
+}
+
+views {
+    view of busybody.web {
+        title "Busybody Web Components"
+        description "The two request surfaces — JSON registration API and the LiveView directory — and the status classifier behind the cards."
+        include busybody.web.*, busybody.registry
+    }
+}

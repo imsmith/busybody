@@ -1,0 +1,63 @@
+// As-built system context for Busybody.
+// Derived from: mix.exs, lib/busybody/application.ex, lib/busybody_web/router.ex,
+// lib/busybody_web/controllers/api_controller.ex, lib/busybody/client.ex,
+// lib/mix/tasks/busybody.install.ex, config/dev.exs (port 5150).
+// The specification block for this project is declared here and only here.
+
+specification {
+    element actor {
+        style {
+            shape browser
+            color muted
+        }
+    }
+    element system
+    element container
+    element component
+
+    relationship ipc
+    relationship message
+    relationship rpc
+    relationship http
+    relationship tcp
+}
+
+model {
+    developer = actor {
+        title 'Developer'
+        description 'Opens the directory page at http://localhost:5150 to find the port of whichever dev app is running.'
+        technology 'Web browser'
+    }
+
+    devapp = system {
+        title 'Dev Application'
+        description 'Any locally running app that registers itself. Elixir/Phoenix apps embed Busybody.Client in their supervision tree (dev only); anything else uses the busybody-client wrappers. Registration is a heartbeat, not a lease: 60s re-POSTs.'
+        technology 'Phoenix app, Go binary, or POSIX sh wrapper'
+    }
+
+    hostproject = system {
+        title 'Host Phoenix Project'
+        description 'A Phoenix project being modified by `mix busybody.install`, which adds the busybody dep and wires Busybody.Client into the supervision tree behind a Code.ensure_loaded?/1 guard.'
+        technology 'Elixir/Phoenix source tree'
+    }
+
+    busybody = system {
+        title 'Busybody'
+        description 'A dev-only service directory on a fixed port (5150). Apps POST their name, port, pid and host; a LiveView shows them as live cards; a health checker TCP-probes every 30s and prunes what it cannot reach. All state is in one GenServer — no database, empty on restart, refilled by heartbeats.'
+        technology 'Elixir / Phoenix 1.8 / Bandit / LiveView 1.1'
+    }
+
+    devapp -[http]-> busybody "POST /api/register every 60s (name, port, pid, host)"
+    developer -[http]-> busybody "Browses the live directory at localhost:5150"
+    developer -[http]-> devapp "Follows a card link to the app's port"
+    busybody -[tcp]-> devapp "TCP connect probe every 30s; failure deregisters the entry"
+    busybody -[ipc]-> hostproject "mix busybody.install rewrites deps and the supervision tree (Igniter)"
+}
+
+views {
+    view {
+        title "Busybody System Context"
+        description "The directory, the apps that announce themselves to it, and the developer who reads it."
+        include *
+    }
+}

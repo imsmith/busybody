@@ -1,0 +1,56 @@
+// As-built container view of Busybody.
+// Derived from: lib/busybody/application.ex (supervision tree), registry.ex,
+// health_checker.ex, lib/busybody_web/ (endpoint, router, api_controller,
+// directory_live, status), lib/mix/tasks/busybody.install.ex, lib/busybody/client.ex.
+
+model {
+    extend busybody {
+        web = container {
+            title 'Web'
+            description 'Phoenix endpoint and router. Two surfaces: the browser pipeline serving the LiveView directory at /, and the JSON API pipeline at /api.'
+            technology 'Phoenix 1.8 / Bandit / LiveView 1.1'
+        }
+
+        registry = container {
+            title 'Registry'
+            description 'GenServer holding the whole directory in memory as a map keyed by app name. Upserts preserve registered_at and refresh last_seen; capped at 100 entries, over which a registration is refused with {:error, :registry_full}. Broadcasts every change on Phoenix.PubSub topic "registry".'
+            technology 'GenServer + Phoenix.PubSub'
+        }
+
+        healthchecker = container {
+            title 'Health Checker'
+            description 'GenServer that ticks every 30s and TCP-probes every registered host:port with a 2s timeout, up to 10 concurrently via Task.async_stream. Any entry that fails the connect is deregistered immediately.'
+            technology 'GenServer + :gen_tcp'
+        }
+
+        client = container {
+            title 'Busybody.Client'
+            description 'The Elixir-side registration worker consumer apps add to their own supervision tree. Resolves its port from an explicit :port or the host endpoint config, waits 2s after start, then registers and heartbeats every 60s to registry_url (default http://localhost:5150).'
+            technology 'GenServer + :httpc (:inets)'
+        }
+
+        installer = container {
+            title 'mix busybody.install'
+            description 'Igniter task that adds the busybody dep (path, or git with --git) and wires {Busybody.Client, ...} into the host app supervision tree behind a Code.ensure_loaded?/1 guard, so prod and test compile without the dep. Compiled only when Igniter is loadable.'
+            technology 'Igniter.Mix.Task'
+        }
+
+        web -[ipc]-> registry "register/2, deregister/2, list/1; LiveView subscribes to change events"
+        healthchecker -[ipc]-> registry "list/1 each tick, deregister/2 on an unreachable probe"
+
+        devapp -[ipc]-> client "Started in the app's own supervision tree (dev only)"
+        client -[http]-> web "POST /api/register on start and every 60s"
+        healthchecker -[tcp]-> devapp "connect(host, port) with a 2s timeout"
+        developer -[http]-> web "GET / — the live directory"
+        installer -[ipc]-> hostproject "Patches mix.exs and application.ex"
+    }
+}
+
+views {
+    view of busybody {
+        title "Busybody Containers"
+        description "Five moving parts as built: web layer, in-memory registry, health checker, the client worker consumers embed, and the Igniter installer that wires it in."
+        include busybody.web, busybody.registry, busybody.healthchecker, busybody.client,
+            busybody.installer, developer, devapp, hostproject
+    }
+}
