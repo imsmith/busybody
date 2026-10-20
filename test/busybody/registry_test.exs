@@ -35,6 +35,14 @@ defmodule Busybody.RegistryTest do
       assert app.pid == "12346"
     end
 
+    test "stores an optional group", %{registry: registry} do
+      Registry.register(registry, %{name: "a", port: 4000, pid: "1", host: "h", group: "infra"})
+      Registry.register(registry, %{name: "b", port: 4001, pid: "2", host: "h"})
+
+      assert Enum.find(Registry.list(registry), &(&1.name == "a")).group == "infra"
+      assert Enum.find(Registry.list(registry), &(&1.name == "b")).group == nil
+    end
+
     test "multiple apps coexist", %{registry: registry} do
       Registry.register(registry, %{name: "app1", port: 4000, pid: "1", host: "localhost"})
       Registry.register(registry, %{name: "app2", port: 4001, pid: "2", host: "localhost"})

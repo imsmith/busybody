@@ -15,6 +15,7 @@ defmodule Busybody.Client do
     * `:port` - explicit port (overrides endpoint resolution)
     * `:registry_url` - defaults to "http://localhost:5150"
     * `:host` - defaults to system hostname
+    * `:group` - optional group membership shown in the directory
     * `:heartbeat_interval` - ms between re-registrations (default 60s)
     * `:process_name` - registered name for this GenServer (default `Busybody.Client`)
   """
@@ -27,7 +28,13 @@ defmodule Busybody.Client do
   @startup_delay :timer.seconds(2)
 
   @typedoc "JSON body sent to `POST /api/register`."
-  @type payload :: %{name: String.t(), port: pos_integer(), pid: String.t(), host: String.t()}
+  @type payload :: %{
+          required(:name) => String.t(),
+          required(:port) => pos_integer(),
+          required(:pid) => String.t(),
+          required(:host) => String.t(),
+          optional(:group) => String.t()
+        }
 
   @doc "Start the client GenServer. See module docs for available options."
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -61,7 +68,11 @@ defmodule Busybody.Client do
       pid: System.pid() |> to_string(),
       host: Keyword.get(opts, :host, to_string(hostname))
     }
+    |> maybe_put(:group, Keyword.get(opts, :group))
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   @doc """
   Resolve the port from opts — either an explicit `:port` or by

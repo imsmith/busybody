@@ -63,11 +63,12 @@ can't stall the cycle.
 
 **API Controller** (`BusybodyWeb.ApiController`) — Two endpoints:
 
-    POST /api/register   {"name": "myapp", "port": 4829, "pid": "12345", "host": "devbox"}
+    POST /api/register   {"name": "myapp", "port": 4829, "pid": "12345", "host": "devbox", "group": "infra"}
     GET  /api/apps        returns the full registry as JSON
 
 Input is validated at the boundary: port must be an integer 1-65535,
-name/pid/host must be non-empty strings.
+name/pid/host must be non-empty strings. `group` is optional; when
+present it must be a non-empty string.
 
 **LiveView** (`BusybodyWeb.DirectoryLive`) — The directory page at `/`.
 Subscribes to PubSub events from the Registry. Cards show the app
@@ -148,6 +149,7 @@ registration happens.
 | `port` | *(from endpoint)* | Explicit port, overrides endpoint resolution |
 | `registry_url` | `http://localhost:5150` | Where busybody is running |
 | `host` | system hostname | Host shown in the directory and used for health checks |
+| `group` | *(none)* | Optional group membership shown on the card |
 
 ## Non-Elixir apps
 

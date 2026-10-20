@@ -3,7 +3,7 @@ defmodule Busybody.Registry do
   GenServer that holds an in-memory registry of running apps.
 
   Each entry is keyed by app name and carries: name, port, pid, host,
-  registered_at, last_seen. Broadcasts changes via Phoenix.PubSub so
+  group (optional), registered_at, last_seen. Broadcasts changes via Phoenix.PubSub so
   LiveView subscribers can react in real-time.
   """
 
@@ -14,7 +14,13 @@ defmodule Busybody.Registry do
   @max_entries 100
 
   @typedoc "Fields a caller supplies when registering."
-  @type attrs :: %{name: String.t(), port: 1..65_535, pid: String.t(), host: String.t()}
+  @type attrs :: %{
+          required(:name) => String.t(),
+          required(:port) => 1..65_535,
+          required(:pid) => String.t(),
+          required(:host) => String.t(),
+          optional(:group) => String.t() | nil
+        }
 
   @typedoc "A stored entry: the supplied fields plus registry timestamps."
   @type entry :: %{
@@ -22,6 +28,7 @@ defmodule Busybody.Registry do
           port: 1..65_535,
           pid: String.t(),
           host: String.t(),
+          group: String.t() | nil,
           registered_at: DateTime.t(),
           last_seen: DateTime.t()
         }
@@ -38,7 +45,7 @@ defmodule Busybody.Registry do
   @doc """
   Register or update an app entry.
 
-  Upserts by name — a re-registration updates port/pid/host and refreshes
+  Upserts by name — a re-registration updates port/pid/host/group and refreshes
   `last_seen` while preserving the original `registered_at`.
 
   ## Examples
@@ -116,6 +123,7 @@ defmodule Busybody.Registry do
         port: attrs.port,
         pid: attrs.pid,
         host: attrs.host,
+        group: Map.get(attrs, :group),
         registered_at: get_in(state, [attrs.name, :registered_at]) || now,
         last_seen: now
       }

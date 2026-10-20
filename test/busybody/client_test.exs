@@ -14,6 +14,11 @@ defmodule Busybody.ClientTest do
       assert is_binary(payload.pid)
     end
 
+    test "includes group only when given" do
+      refute Map.has_key?(Client.build_payload(name: "myapp", port: 4000), :group)
+      assert Client.build_payload(name: "myapp", port: 4000, group: "infra").group == "infra"
+    end
+
     test "defaults host to system hostname" do
       payload = Client.build_payload(name: "myapp", port: 4000)
       {:ok, hostname} = :inet.gethostname()

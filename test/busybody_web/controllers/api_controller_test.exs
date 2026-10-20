@@ -29,6 +29,39 @@ defmodule BusybodyWeb.ApiControllerTest do
       assert hd(apps).host == "devbox"
     end
 
+    test "accepts an optional group", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/register", %{
+          "name" => "grouped",
+          "port" => 4000,
+          "pid" => "1",
+          "host" => "x",
+          "group" => "infra"
+        })
+
+      assert json_response(conn, 200) == %{"status" => "ok"}
+      assert hd(Busybody.Registry.list()).group == "infra"
+    end
+
+    test "returns 422 when group is not a non-empty string", %{conn: conn} do
+      for bad <- ["", 42] do
+        conn =
+          conn
+          |> put_req_header("content-type", "application/json")
+          |> post("/api/register", %{
+            "name" => "bad",
+            "port" => 4000,
+            "pid" => "1",
+            "host" => "x",
+            "group" => bad
+          })
+
+        assert json_response(conn, 422)
+      end
+    end
+
     test "returns 422 when name is missing", %{conn: conn} do
       conn =
         conn
@@ -70,6 +103,7 @@ defmodule BusybodyWeb.ApiControllerTest do
       %{"apps" => [app]} = json_response(conn, 200)
       assert app["name"] == "app1"
       assert app["port"] == 4000
+      assert app["group"] == nil
     end
   end
 end

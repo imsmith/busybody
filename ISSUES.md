@@ -2,6 +2,17 @@
 
 Tracked here until they migrate to a real issue tracker. Newest first.
 
+## Directory should section cards by `group`
+
+**Filed:** 2026-10-15
+**Status:** deferred, wanted
+
+Registrations now carry an optional `group` string. The directory shows
+it as a row on the card only. The intended end state is a grid
+sectioned by group (ungrouped apps in their own section). `group`
+values are currently any non-empty string; input validation on the
+value is also planned and should land before or with the sectioning.
+
 ## `busybody.install` should sync the endpoint's `:url` port to the bound port
 
 **Filed:** 2026-05-11

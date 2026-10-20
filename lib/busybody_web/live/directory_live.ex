@@ -89,6 +89,10 @@ defmodule BusybodyWeb.DirectoryLive do
           <dt>PORT</dt>
           <dd>{@app.port}</dd>
         </div>
+        <div :if={@app.group} class="flex justify-between">
+          <dt>GROUP</dt>
+          <dd>{@app.group}</dd>
+        </div>
         <div class="flex justify-between">
           <dt>PID</dt>
           <dd>{@app.pid}</dd>

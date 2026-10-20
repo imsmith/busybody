@@ -33,6 +33,14 @@ defmodule Mix.Tasks.Busybody.InstallTest do
     """)
   end
 
+  test "passes --group through to the client child spec" do
+    phx_test_project()
+    |> Igniter.compose_task("busybody.install", ["--name", "my_app", "--group", "infra"])
+    |> assert_has_patch("lib/test/application.ex", """
+    + |      [{Busybody.Client, name: "my_app", endpoint: TestWeb.Endpoint, group: "infra"}]
+    """)
+  end
+
   test "is idempotent — a second run does not double-append or duplicate the helper" do
     {:ok, after_first, _} =
       phx_test_project()

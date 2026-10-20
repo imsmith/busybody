@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Igniter) do
     ## Options
 
       * `--name` - app name to register (default: OTP app name)
+      * `--group` - optional group membership shown in the directory
       * `--path` - path to busybody (default `../busybody`)
       * `--git`  - use a git dep instead of a path dep
 
@@ -28,7 +29,7 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{
         group: :busybody,
         example: "mix busybody.install --name my_app",
-        schema: [name: :string, path: :string, git: :string]
+        schema: [name: :string, group: :string, path: :string, git: :string]
       }
     end
 
@@ -40,7 +41,7 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter
       |> Igniter.Project.Deps.add_dep(busybody_dep(opts))
-      |> wire_supervision(app_name, endpoint)
+      |> wire_supervision(app_name, opts[:group], endpoint)
       |> Igniter.add_notice("""
       Busybody client installed.
 
@@ -57,12 +58,12 @@ if Code.ensure_loaded?(Igniter) do
       {igniter, endpoint}
     end
 
-    defp wire_supervision(igniter, app_name, endpoint) do
+    defp wire_supervision(igniter, app_name, group, endpoint) do
       app_module = Igniter.Project.Application.app_module(igniter)
 
       igniter
       |> append_children_call(app_module)
-      |> add_helper(app_module, app_name, endpoint)
+      |> add_helper(app_module, app_name, group, endpoint)
     end
 
     defp append_children_call(igniter, app_module) do
@@ -104,8 +105,9 @@ if Code.ensure_loaded?(Igniter) do
       match?({:++, _, [_, {:busybody_children, _, _}]}, zipper.node)
     end
 
-    defp add_helper(igniter, app_module, app_name, endpoint) do
+    defp add_helper(igniter, app_module, app_name, group, endpoint) do
       endpoint_kw = if endpoint, do: ", endpoint: #{inspect(endpoint)}", else: ""
+      group_kw = if group, do: ", group: #{inspect(group)}", else: ""
 
       Igniter.Project.Module.find_and_update_module!(igniter, app_module, fn zipper ->
         case Igniter.Code.Function.move_to_defp(zipper, :busybody_children, 0) do
@@ -117,7 +119,7 @@ if Code.ensure_loaded?(Igniter) do
              Igniter.Code.Common.add_code(zipper, """
              defp busybody_children do
                if Code.ensure_loaded?(Busybody.Client) do
-                 [{Busybody.Client, name: #{inspect(app_name)}#{endpoint_kw}}]
+                 [{Busybody.Client, name: #{inspect(app_name)}#{endpoint_kw}#{group_kw}}]
                else
                  []
                end
