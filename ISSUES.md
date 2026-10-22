@@ -16,6 +16,10 @@ value is also planned and should land before or with the sectioning.
 ## Adding busybody as a dep boots the whole server inside the client app
 
 **Filed:** 2026-10-14
+**Resolved:** 2026-10-20, the longer-term option — `Busybody.Client` and
+the installer left this repo in `d47515c` for the dependency-free
+`busybody_client` package in busybody-client. Consumers add
+`{:busybody_client, ...}`; nothing from the server ships with it.
 **Reported from:** installing the client into paperclip
 
 ### Symptom
@@ -210,6 +214,8 @@ would let them evict others.
 ## Verified accurate: the `busybody.install` "inert stub" moduledoc
 
 **Filed:** 2026-08-04
+**Obsolete:** 2026-10-20 — `busybody.install` was removed in `d47515c` and
+Igniter dropped across comn and busybody-client. Kept for the record.
 **Reported from:** as-built architecture review
 
 ### Symptom
@@ -239,6 +245,11 @@ behavior; it is just not what "inert" suggests on first read.
 ## `busybody.install` should sync the endpoint's `:url` port to the bound port
 
 **Filed:** 2026-05-11
+**Status:** 2026-10-20, moved — there is no installer to carry this
+(`d47515c`). Gotcha 3 is now handled: `Busybody.Client` in busybody-client
+treats `{:error, :no_server_found}` as "no port yet" and retries. The url
+sync itself is still wanted; the natural home is `Busybody.Client`, which
+already has the bound port each tick. Re-file in busybody-client if pursued.
 **Reported from:** bookweb integration
 
 ### Symptom

@@ -105,14 +105,24 @@ this Phoenix app as a dependency would start a second registry and
 endpoint inside your app and drag Phoenix, LiveView, and the asset
 toolchain along with it. Add the client package instead.
 
-Three changes. First, the endpoint. The default `phx.new` dev config
-binds a fixed port on loopback, which is exactly the state busybody
-exists to end: a port you have to track, on an address only this host
-can reach. In `config/dev.exs`, let the OS pick the port and listen on
-every interface:
+Three changes. First, the endpoint, and this is the one that matters:
+**the app must not pick its own port.** Busybody exists so that nobody
+does. The default `phx.new` dev config binds a fixed port on loopback,
+which is exactly the state busybody ends: a port you have to track, on
+an address only this host can reach. In `config/runtime.exs`, let the
+OS pick the port and listen on every interface:
 
     config :my_app, MyAppWeb.Endpoint,
-      http: [ip: {0, 0, 0, 0}, port: 0]
+      http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT", "0"))]
+
+That is the only `http:` line in `config/`. Remove the ones `phx.new`
+put in `config/dev.exs` and the prod block of `runtime.exs`; a second
+`http:` anywhere silently wins. Never write `server: false` either: an
+explicit `:server` key overrides `mix phx.server` and the endpoint never
+binds. The client logs a warning at registration if it finds a fixed
+port.
+
+    grep -n 'http:\|server:' config/*.exs
 
 Port `0` means a free port is assigned at bind time and changes on every
 start. `{0, 0, 0, 0}` means the app answers on all IPv4 addresses, so
